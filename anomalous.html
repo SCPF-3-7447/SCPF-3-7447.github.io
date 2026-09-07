@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SCPF — Anomalous Object Registry</title>
+
+<style>
+    :root {
+        --bg: #070908;
+        --panel: #0d110f;
+        --panel2: #111713;
+        --green: #8cff9b;
+        --green-dim: #4d9b58;
+        --amber: #e8b94f;
+        --red: #ff5c5c;
+        --white: #d9e5db;
+        --muted: #718074;
+        --line: #263328;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background:
+            radial-gradient(circle at top, #111a13 0%, var(--bg) 55%);
+        color: var(--white);
+        font-family: "Courier New", Courier, monospace;
+        min-height: 100vh;
+    }
+
+    body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.018) 0px,
+            rgba(255,255,255,0.018) 1px,
+            transparent 2px,
+            transparent 4px
+        );
+
+        opacity: .35;
+    }
+
+    .terminal {
+        width: min(1200px, 94%);
+        margin: 25px auto;
+        border: 1px solid var(--green-dim);
+        background: rgba(7, 10, 8, .96);
+
+        box-shadow:
+            0 0 25px rgba(76, 255, 104, .08),
+            inset 0 0 50px rgba(0,0,0,.5);
+    }
+
+    header {
+        border-bottom: 1px solid var(--line);
+        padding: 20px;
+        background: linear-gradient(90deg, #0d130f, #111912);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .foundation {
+        color: var(--green);
+        font-size: 1.25rem;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+
+    .subtitle {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: .8rem;
+    }
+
+    .classification {
+        color: var(--amber);
+        border: 1px solid var(--amber);
+        padding: 5px 9px;
+        font-size: .75rem;
+    }
+
+    .identity {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .identity-box {
+        border: 1px solid var(--line);
+        padding: 10px;
+        background: #0a0e0b;
+    }
+
+    .label {
+        display: block;
+        color: var(--muted);
+        font-size: .68rem;
+        margin-bottom: 5px;
+    }
+
+    .value {
+        color: var(--green);
+        font-size: .85rem;
+    }
+
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+        background: #0b0f0c;
+    }
+
+    .back {
+        color: var(--green);
+        text-decoration: none;
+        border: 1px solid var(--green-dim);
+        padding: 8px 12px;
+        font-size: .72rem;
+    }
+
+    .back:hover {
+        background: #121a14;
+    }
+
+    .system-status {
+        color: var(--muted);
+        font-size: .7rem;
+    }
+
+    main {
+        padding: 20px;
+    }
+
+    .page-title {
+        color: var(--green);
+        margin: 0 0 5px;
+        font-size: 1.15rem;
+    }
+
+    .page-description {
+        color: var(--muted);
+        font-size: .78rem;
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        border: 1px solid var(--amber);
+        color: var(--amber);
+        padding: 12px;
+        margin-bottom: 18px;
+        background: rgba(232,185,79,.035);
+    }
+
+    .search {
+        width: 100%;
+        background: #080b09;
+        border: 1px solid var(--line);
+        color: var(--green);
+        padding: 13px;
+        font-family: inherit;
+        margin-bottom: 15px;
+        outline: none;
+    }
+
+    .search:focus {
+        border-color: var(--green-dim);
+        box-shadow: 0 0 10px rgba(76,255,104,.06);
+    }
+
+    .object-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .object {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 15px;
+        cursor: pointer;
+        transition: .15s;
+    }
+
+    .object:hover {
+        border-color: var(--green-dim);
+        background: #111812;
+        transform: translateY(-1px);
+    }
+
+    .object-id {
+        color: var(--amber);
+        font-size: .7rem;
+    }
+
+    .object-name {
+        color: var(--green);
+        font-size: .95rem;
+        margin: 7px 0;
+    }
+
+    .object-description {
+        color: var(--muted);
+        font-size: .72rem;
+        line-height: 1.5;
+    }
+
+    .badge {
+        display: inline-block;
+        border: 1px solid var(--green-dim);
+        color: var(--green);
+        padding: 3px 7px;
+        font-size: .62rem;
+        margin-top: 10px;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.82);
+        z-index: 10;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .modal-content {
+        width: min(850px, 100%);
+        margin: 30px auto;
+        background: #080b09;
+        border: 1px solid var(--green-dim);
+        box-shadow: 0 0 35px rgba(76,255,104,.1);
+    }
+
+    .modal-header {
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+    }
+
+    .modal-title {
+        color: var(--green);
+        font-size: 1rem;
+    }
+
+    .close {
+        color: var(--red);
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+
+    .file {
+        padding: 20px;
+    }
+
+    .file-line {
+        margin-bottom: 17px;
+    }
+
+    .file-label {
+        color: var(--amber);
+        font-size: .68rem;
+        margin-bottom: 5px;
+    }
+
+    .file-text {
+        color: #b9c7bc;
+        font-size: .78rem;
+        line-height: 1.7;
+    }
+
+    .restricted {
+        color: var(--red);
+    }
+
+    footer {
+        border-top: 1px solid var(--line);
+        padding: 13px 20px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: .65rem;
+    }
+
+    .blink {
+        animation: blink 1.3s infinite;
+    }
+
+    @keyframes blink {
+        50% {
+            opacity: .35;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .identity,
+        .object-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-top {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .topbar {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="terminal">
+
+<header>
+
+    <div class="header-top">
+
+        <div>
+            <div class="foundation">
+                SCP FOUNDATION // INTERNAL TERMINAL
+            </div>
+
+            <div class="subtitle">
+                ANOMALOUS OBJECT REGISTRY
+            </div>
+        </div>
+
+        <div class="classification">
+            LEVEL 3 // AUTHORIZED
+        </div>
+
+    </div>
+
+    <div class="identity">
+
+        <div class="identity-box">
+            <span class="label">PERSONNEL</span>
+            <span class="value">MICHAEL</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">PERSONNEL ID</span>
+            <span class="value">SCPF-3-7447</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">DEPARTMENT</span>
+            <span class="value">PROCUREMENT & LIQUIDATION</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">SESSION</span>
+            <span class="value blink">● ACTIVE</span>
+        </div>
+
+    </div>
+
+</header>
+
+<div class="topbar">
+
+    <a class="back" href="index.html">
+        ← RETURN TO P&L TERMINAL
+    </a>
+
+    <div class="system-status">
+        DATABASE STATUS: ONLINE // RECORDS AVAILABLE: 10
+    </div>
+
+</div>
+
+<main>
+
+    <h1 class="page-title">
+        SAFE-CLASS ANOMALOUS OBJECT REGISTRY
+    </h1>
+
+    <div class="page-description">
+        Foundation-maintained registry of contained anomalous objects classified
+        as SAFE.
+    </div>
+
+    <div class="alert">
+        NOTICE: "SAFE" indicates predictable containment requirements.
+        It does NOT indicate that an object is harmless.
+    </div>
+
+    <input
+        class="search"
+        type="text"
+        id="search"
+        placeholder="SEARCH OBJECT ID, DESIGNATION, OR DESCRIPTION..."
+        onkeyup="searchObjects()"
+    >
+
+    <div class="object-grid" id="objectGrid">
+
+        <div class="object"
+             data-search="AO-017 Self-Filling Mug coffee ceramic mug"
+             onclick="openFile('AO-017')">
+
+            <div class="object-id">AO-017</div>
+            <div class="object-name">"THE SELF-FILLING MUG"</div>
+
+            <div class="object-description">
+                Standard ceramic coffee mug capable of producing hot
+                coffee when completely empty.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-042 Quiet Key lock key"
+             onclick="openFile('AO-042')">
+
+            <div class="object-id">AO-042</div>
+            <div class="object-name">"THE QUIET KEY"</div>
+
+            <div class="object-description">
+                Brass key capable of opening conventional mechanical locks
+                without producing an audible sound.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-108 Tuesday Coin coin"
+             onclick="openFile('AO-108')">
+
+            <div class="object-id">AO-108</div>
+            <div class="object-name">"THE TUESDAY COIN"</div>
+
+            <div class="object-description">
+                Metallic coin exhibiting anomalous behavior exclusively
+                between 00:00 and 23:59 each Tuesday.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-221 Maintenance Box tools repair"
+             onclick="openFile('AO-221')">
+
+            <div class="object-id">AO-221</div>
+            <div class="object-name">"THE MAINTENANCE BOX"</div>
+
+            <div class="object-description">
+                Small toolbox containing whichever ordinary hand tool is
+                most appropriate for a nearby mechanical repair.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-314 Polite Door door courtesy"
+             onclick="openFile('AO-314')">
+
+            <div class="object-id">AO-314</div>
+            <div class="object-name">"THE POLITE DOOR"</div>
+
+            <div class="object-description">
+                Door which refuses to open unless addressed using a
+                courteous verbal request.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-406 Endless Pencil pencil writing"
+             onclick="openFile('AO-406')">
+
+            <div class="object-id">AO-406</div>
+            <div class="object-name">"THE ENDLESS PENCIL"</div>
+
+            <div class="object-description">
+                Yellow No. 2 pencil which remains at its original length
+                regardless of writing or sharpening.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-512 Warm Blanket blanket temperature"
+             onclick="openFile('AO-512')">
+
+            <div class="object-id">AO-512</div>
+            <div class="object-name">"THE WARM BLANKET"</div>
+
+            <div class="object-description">
+                Standard blanket that maintains a comfortable temperature
+                regardless of surrounding environmental conditions.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-633 Missing Sock sock clothing"
+             onclick="openFile('AO-633')">
+
+            <div class="object-id">AO-633</div>
+            <div class="object-name">"THE MISSING SOCK"</div>
+
+            <div class="object-description">
+                Singular black sock which causes its paired sock to
+                appear within approximately 24 hours.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-701 Clock Clock time"
+             onclick="openFile('AO-701')">
+
+            <div class="object-id">AO-701</div>
+            <div class="object-name">"THE HONEST CLOCK"</div>
+
+            <div class="object-description">
+                Analog wall clock that displays the correct local time
+                without requiring power or maintenance.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+
+        <div class="object"
+             data-search="AO-884 Paper Printer paper document"
+             onclick="openFile('AO-884')">
+
+            <div class="object-id">AO-884</div>
+            <div class="object-name">"THE PAPER PRINTER"</div>
+
+            <div class="object-description">
+                Printer capable of producing a single sheet of blank paper
+                whenever its output tray is empty.
+            </div>
+
+            <span class="badge">SAFE</span>
+        </div>
+
+    </div>
+
+</main>
+
+<footer>
+
+    <span>
+        SCPF INTERNAL NETWORK // ANOMALOUS OBJECT REGISTRY
+    </span>
+
+    <span>
+        ACCESS LOG: SCPF-3-7447
+    </span>
+
+</footer>
+
+</div>
+
+
+<!-- OBJECT FILE MODAL -->
+
+<div class="modal" id="fileModal">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <div class="modal-title" id="modalTitle">
+                OBJECT FILE
+            </div>
+
+            <div class="close" onclick="closeFile()">
+                [X]
+            </div>
+
+        </div>
+
+        <div class="file" id="fileContent">
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const files = {
+
+    "AO-017": {
+        name: '"THE SELF-FILLING MUG"',
+        objectClass: "SAFE",
+        description:
+            "AO-017 is a commercially manufactured ceramic coffee mug. When the internal volume of AO-017 is completely empty, it will immediately contain approximately 350 mL of hot black coffee. The coffee is safe for human consumption and displays no anomalous properties.",
+        containment:
+            "AO-017 is to be stored in the departmental break room when not undergoing testing. Personnel are permitted to use AO-017 for normal beverage consumption.",
+        notes:
+            "Personnel have repeatedly attempted to request beverages other than coffee. These attempts have been unsuccessful."
+    },
+
+    "AO-042": {
+        name: '"THE QUIET KEY"',
+        objectClass: "SAFE",
+        description:
+            "AO-042 is a brass key capable of opening conventional mechanical locks without producing an audible mechanical sound. The object does not bypass electronic, biometric, or anomalous security systems.",
+        containment:
+            "AO-042 is stored within a standard evidence locker. Testing requires approval from Security Department personnel.",
+        notes:
+            "AO-042 is not authorized for routine security operations."
+    },
+
+    "AO-108": {
+        name: '"THE TUESDAY COIN"',
+        objectClass: "SAFE",
+        description:
+            "AO-108 is a metallic coin resembling a United States quarter. During Tuesdays, the coin will always land on its edge when flipped. Outside of Tuesdays, it behaves normally.",
+        containment:
+            "AO-108 may be stored in a standard secure locker.",
+        notes:
+            "The anomaly appears unaffected by changes in timezone."
+    },
+
+    "AO-221": {
+        name: '"THE MAINTENANCE BOX"',
+        objectClass: "SAFE",
+        description:
+            "AO-221 is a small red metal toolbox. When opened within five meters of a mechanical device requiring repair, it contains one ordinary hand tool capable of performing the necessary repair.",
+        containment:
+            "AO-221 is stored within Facilities Maintenance.",
+        notes:
+            "AO-221 has never produced a tool that does not exist in conventional manufacturing."
+    },
+
+    "AO-314": {
+        name: '"THE POLITE DOOR"',
+        objectClass: "SAFE",
+        description:
+            "AO-314 is a standard interior wooden door. The door will only open when a person requesting access uses a phrase containing a clear expression of courtesy.",
+        containment:
+            "AO-314 is currently installed within a low-security testing area.",
+        notes:
+            "Personnel are reminded that kicking the door does not constitute a polite request."
+    },
+
+    "AO-406": {
+        name: '"THE ENDLESS PENCIL"',
+        objectClass: "SAFE",
+        description:
+            "AO-406 resembles a standard yellow No. 2 pencil. Its physical dimensions remain unchanged when sharpened or used for writing. The graphite supply appears functionally inexhaustible.",
+        containment:
+            "AO-406 is stored in the Anomalous Materials Office.",
+        notes:
+            "Do not attempt to determine the pencil's maximum possible writing capacity."
+    },
+
+    "AO-512": {
+        name: '"THE WARM BLANKET"',
+        objectClass: "SAFE",
+        description:
+            "AO-512 is a standard wool blanket that maintains a constant comfortable temperature for any human individual in contact with it.",
+        containment:
+            "AO-512 is stored in Medical during winter months and Research during testing periods.",
+        notes:
+            "Requests for permanent personal assignment have been denied."
+    },
+
+    "AO-633": {
+        name: '"THE MISSING SOCK"',
+        objectClass: "SAFE",
+        description:
+            "AO-633 is a single black cotton sock. Within approximately 24 hours of being separated from AO-633, the matching sock from the same pair will spontaneously appear within the containment area.",
+        containment:
+            "AO-633 is stored in a sealed evidence bag.",
+        notes:
+            "The Foundation has been unable to determine how AO-633 identifies its corresponding pair."
+    },
+
+    "AO-701": {
+        name: '"THE HONEST CLOCK"',
+        objectClass: "SAFE",
+        description:
+            "AO-701 is a mechanical analog wall clock that displays the correct local time despite having no detectable power source or conventional mechanical movement.",
+        containment:
+            "AO-701 is mounted within Observation Room 2.",
+        notes:
+            "AO-701 has maintained accurate time during multiple facility-wide power failures."
+    },
+
+    "AO-884": {
+        name: '"THE PAPER PRINTER"',
+        objectClass: "SAFE",
+        description:
+            "AO-884 is a commercially manufactured office printer. Whenever its paper output tray is completely empty, a single sheet of ordinary white printer paper will appear within it.",
+        containment:
+            "AO-884 is currently assigned to Procurement & Liquidation.",
+        notes:
+            "Procurement personnel have been advised not to classify the object as an unlimited paper supply without authorization."
+    }
+
+};
+
+
+function openFile(id) {
+
+    const file = files[id];
+
+    document.getElementById("modalTitle").innerHTML =
+        id + " // " + file.name;
+
+    document.getElementById("fileContent").innerHTML = `
+
+        <div class="file-line">
+
+            <div class="file-label">
+                OBJECT CLASSIFICATION
+            </div>
+
+            <div class="file-text">
+                ${file.objectClass}
+            </div>
+
+        </div>
+
+
+        <div class="file-line">
+
+            <div class="file-label">
+                DESCRIPTION
+            </div>
+
+            <div class="file-text">
+                ${file.description}
+            </div>
+
+        </div>
+
+
+        <div class="file-line">
+
+            <div class="file-label">
+                CONTAINMENT / STORAGE
+            </div>
+
+            <div class="file-text">
+                ${file.containment}
+            </div>
+
+        </div>
+
+
+        <div class="file-line">
+
+            <div class="file-label">
+                PERSONNEL NOTES
+            </div>
+
+            <div class="file-text">
+                ${file.notes}
+            </div>
+
+        </div>
+
+
+        <div class="file-line">
+
+            <div class="file-label">
+                ACCESS LOG
+            </div>
+
+            <div class="file-text">
+                SCPF-3-7447 — LEVEL 3 ACCESS GRANTED<br>
+                DATABASE QUERY AUTHORIZED<br>
+                RECORD RETRIEVED SUCCESSFULLY
+            </div>
+
+        </div>
+
+    `;
+
+    document.getElementById("fileModal").style.display = "block";
+}
+
+
+function closeFile() {
+
+    document.getElementById("fileModal").style.display = "none";
+
+}
+
+
+function searchObjects() {
+
+    const query =
+        document.getElementById("search").value.toLowerCase();
+
+    const objects =
+        document.querySelectorAll(".object");
+
+    objects.forEach(object => {
+
+        const searchable =
+            object.dataset.search.toLowerCase();
+
+        if (searchable.includes(query)) {
+
+            object.style.display = "block";
+
+        } else {
+
+            object.style.display = "none";
+
+        }
+
+    });
+
+}
+
+
+window.onclick = function(event) {
+
+    const modal =
+        document.getElementById("fileModal");
+
+    if (event.target === modal) {
+
+        closeFile();
+
+    }
+
+};
+
+</script>
+
+</body>
+</html>
