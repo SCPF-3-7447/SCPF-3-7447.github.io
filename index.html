@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCPF — Procurement & Liquidation Terminal</title>
+
+<style>
+    :root {
+        --bg: #070908;
+        --panel: #0d110f;
+        --panel2: #111713;
+        --green: #8cff9b;
+        --green-dim: #4d9b58;
+        --amber: #e8b94f;
+        --red: #ff5c5c;
+        --white: #d9e5db;
+        --muted: #718074;
+        --line: #263328;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background:
+            radial-gradient(circle at top, #111a13 0%, var(--bg) 55%);
+        color: var(--white);
+        font-family: "Courier New", Courier, monospace;
+        min-height: 100vh;
+    }
+
+    body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.018) 0px,
+            rgba(255,255,255,0.018) 1px,
+            transparent 2px,
+            transparent 4px
+        );
+        opacity: .35;
+    }
+
+    .terminal {
+        width: min(1200px, 94%);
+        margin: 25px auto;
+        border: 1px solid var(--green-dim);
+        background: rgba(7, 10, 8, .96);
+        box-shadow:
+            0 0 25px rgba(76, 255, 104, .08),
+            inset 0 0 50px rgba(0,0,0,.5);
+    }
+
+    header {
+        border-bottom: 1px solid var(--line);
+        padding: 20px;
+        background: linear-gradient(90deg, #0d130f, #111912);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .foundation {
+        color: var(--green);
+        font-size: 1.25rem;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+
+    .classification {
+        color: var(--amber);
+        border: 1px solid var(--amber);
+        padding: 5px 9px;
+        font-size: .75rem;
+    }
+
+    .subtitle {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: .8rem;
+    }
+
+    .identity {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .identity-box {
+        border: 1px solid var(--line);
+        padding: 10px;
+        background: #0a0e0b;
+    }
+
+    .label {
+        display: block;
+        color: var(--muted);
+        font-size: .68rem;
+        margin-bottom: 5px;
+    }
+
+    .value {
+        color: var(--green);
+        font-size: .85rem;
+    }
+
+    nav {
+        display: flex;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--line);
+        background: #0b0f0c;
+    }
+
+    nav button {
+        flex: 1;
+        min-width: 130px;
+        padding: 13px 10px;
+        background: transparent;
+        color: var(--muted);
+        border: 0;
+        border-right: 1px solid var(--line);
+        font-family: inherit;
+        cursor: pointer;
+        transition: .15s;
+    }
+
+    nav button:hover,
+    nav button.active {
+        color: var(--green);
+        background: #121a14;
+    }
+
+    main {
+        padding: 20px;
+    }
+
+    .page {
+        display: none;
+    }
+
+    .page.active {
+        display: block;
+    }
+
+    .page-title {
+        color: var(--green);
+        margin: 0 0 5px;
+        font-size: 1.15rem;
+    }
+
+    .page-description {
+        color: var(--muted);
+        font-size: .78rem;
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        border: 1px solid var(--amber);
+        color: var(--amber);
+        padding: 12px;
+        margin-bottom: 18px;
+        background: rgba(232,185,79,.035);
+    }
+
+    .alert.red {
+        border-color: var(--red);
+        color: var(--red);
+        background: rgba(255,92,92,.035);
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat {
+        border: 1px solid var(--line);
+        padding: 16px;
+        background: var(--panel);
+    }
+
+    .stat-number {
+        color: var(--green);
+        font-size: 1.6rem;
+        margin-bottom: 5px;
+    }
+
+    .stat-name {
+        color: var(--muted);
+        font-size: .7rem;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .76rem;
+    }
+
+    th {
+        text-align: left;
+        color: var(--green);
+        background: #111711;
+        padding: 11px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    td {
+        padding: 11px;
+        border-bottom: 1px solid #1a241c;
+        color: #b9c7bc;
+    }
+
+    tr:hover td {
+        background: #101610;
+    }
+
+    .status {
+        display: inline-block;
+        padding: 3px 7px;
+        font-size: .65rem;
+        border: 1px solid;
+    }
+
+    .available {
+        color: var(--green);
+        border-color: var(--green-dim);
+    }
+
+    .pending {
+        color: var(--amber);
+        border-color: var(--amber);
+    }
+
+    .restricted {
+        color: var(--red);
+        border-color: var(--red);
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+
+    .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 15px;
+    }
+
+    .card h3 {
+        margin: 0 0 8px;
+        color: var(--green);
+        font-size: .9rem;
+    }
+
+    .card p {
+        color: var(--muted);
+        font-size: .74rem;
+        line-height: 1.6;
+    }
+
+    .warning {
+        color: var(--red);
+        font-size: .7rem;
+    }
+
+    footer {
+        border-top: 1px solid var(--line);
+        padding: 13px 20px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: .65rem;
+    }
+
+    .blink {
+        animation: blink 1.3s infinite;
+    }
+
+    @keyframes blink {
+        50% {
+            opacity: .35;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .identity,
+        .stats,
+        .card-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .header-top {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .identity,
+        .stats,
+        .card-grid {
+            grid-template-columns: 1fr;
+        }
+
+        main {
+            padding: 12px;
+        }
+
+        .terminal {
+            width: 97%;
+            margin: 8px auto;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="terminal">
+
+<header>
+    <div class="header-top">
+        <div>
+            <div class="foundation">SCP FOUNDATION // INTERNAL TERMINAL</div>
+            <div class="subtitle">
+                PROCUREMENT & LIQUIDATION DEPARTMENT
+            </div>
+        </div>
+
+        <div class="classification">
+            LEVEL 3 // AUTHORIZED
+        </div>
+    </div>
+
+    <div class="identity">
+        <div class="identity-box">
+            <span class="label">PERSONNEL</span>
+            <span class="value">MICHAEL</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">PERSONNEL ID</span>
+            <span class="value">SCPF-3-7447</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">POSITION</span>
+            <span class="value">FACILITY SECURITY GUARD</span>
+        </div>
+
+        <div class="identity-box">
+            <span class="label">ACCESS STATUS</span>
+            <span class="value blink">● ACTIVE</span>
+        </div>
+    </div>
+</header>
+
+<nav>
+    <button class="active" onclick="showPage('dashboard', this)">DASHBOARD</button>
+    <button onclick="showPage('procurement', this)">PROCUREMENT</button>
+    <button onclick="showPage('liquidation', this)">LIQUIDATION</button>
+    <button onclick="showPage('assets', this)">ASSET REGISTRY</button>
+    <button onclick="showPage('transfers', this)">TRANSFER ORDERS</button>
+    <button onclick="showPage('security', this)">SECURITY NOTICES</button>
+</nav>
+
+<main>
+
+<!-- DASHBOARD -->
+
+<section id="dashboard" class="page active">
+
+    <h1 class="page-title">PROCUREMENT & LIQUIDATION DASHBOARD</h1>
+    <div class="page-description">
+        Internal logistics overview // Facility network synchronization: ONLINE
+    </div>
+
+    <div class="alert">
+        NOTICE: All anomalous materials require appropriate containment authorization
+        before movement between departments.
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-number">147</div>
+            <div class="stat-name">ACTIVE ASSETS</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-number">23</div>
+            <div class="stat-name">PENDING REQUESTS</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-number">08</div>
+            <div class="stat-name">LIQUIDATION ORDERS</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-number">03</div>
+            <div class="stat-name">SECURITY FLAGS</div>
+        </div>
+    </div>
+
+    <div class="card-grid">
+
+        <div class="card">
+            <h3>RECENT PROCUREMENT</h3>
+            <p>
+                P&L-0417 — Standard Security Radios<br>
+                Quantity: 24<br>
+                Status: <span class="status available">RECEIVED</span>
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>RECENT LIQUIDATION</h3>
+            <p>
+                P&L-0391 — Damaged Containment Equipment<br>
+                Method: Controlled Destruction<br>
+                Status: <span class="status pending">PENDING</span>
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>ANOMALOUS MATERIAL</h3>
+            <p>
+                AM-0192 — Low-grade anomalous composite<br>
+                Storage: Secure Materials Vault 3<br>
+                Status: <span class="status restricted">RESTRICTED</span>
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>PERSONNEL NOTICE</h3>
+            <p>
+                Security personnel are reminded that Procurement & Liquidation
+                records may contain information exceeding their operational
+                requirement.
+            </p>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- PROCUREMENT -->
+
+<section id="procurement" class="page">
+
+    <h1 class="page-title">PROCUREMENT REQUEST DATABASE</h1>
+    <div class="page-description">
+        Authorized purchase and requisition records.
+    </div>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>REQUEST ID</th>
+                <th>ITEM</th>
+                <th>QTY</th>
+                <th>REQUESTING DEPT.</th>
+                <th>PRIORITY</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>REQ-7441</td>
+                <td>Security Radio, Standard</td>
+                <td>24</td>
+                <td>SECURITY</td>
+                <td>NORMAL</td>
+                <td><span class="status available">APPROVED</span></td>
+            </tr>
+
+            <tr>
+                <td>REQ-7442</td>
+                <td>Ballistic Vest, Type-3</td>
+                <td>12</td>
+                <td>SECURITY</td>
+                <td>HIGH</td>
+                <td><span class="status pending">PROCESSING</span></td>
+            </tr>
+
+            <tr>
+                <td>REQ-7443</td>
+                <td>Containment Case, Reinforced</td>
+                <td>4</td>
+                <td>CONTAINMENT</td>
+                <td>HIGH</td>
+                <td><span class="status available">APPROVED</span></td>
+            </tr>
+
+            <tr>
+                <td>REQ-7444</td>
+                <td>Anomalous Material Sealant</td>
+                <td>6</td>
+                <td>RESEARCH</td>
+                <td>RESTRICTED</td>
+                <td><span class="status restricted">CLEARANCE REQUIRED</span></td>
+            </tr>
+
+            <tr>
+                <td>REQ-7445</td>
+                <td>Industrial Batteries</td>
+                <td>80</td>
+                <td>FACILITIES</td>
+                <td>NORMAL</td>
+                <td><span class="status available">APPROVED</span></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+</section>
+
+
+<!-- LIQUIDATION -->
+
+<section id="liquidation" class="page">
+
+    <h1 class="page-title">LIQUIDATION ORDERS</h1>
+    <div class="page-description">
+        Assets scheduled for destruction, disposal, transfer, or decommissioning.
+    </div>
+
+    <div class="alert red">
+        WARNING: Liquidation orders involving anomalous materials require
+        two-person authorization and appropriate containment procedures.
+    </div>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ORDER</th>
+                <th>ASSET</th>
+                <th>REASON</th>
+                <th>METHOD</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>LIQ-2081</td>
+                <td>Damaged Security Drone</td>
+                <td>NON-REPAIRABLE</td>
+                <td>SCRAP</td>
+                <td><span class="status pending">PENDING</span></td>
+            </tr>
+
+            <tr>
+                <td>LIQ-2082</td>
+                <td>Containment Case #19</td>
+                <td>STRUCTURAL FAILURE</td>
+                <td>CONTROLLED DESTRUCTION</td>
+                <td><span class="status pending">PENDING</span></td>
+            </tr>
+
+            <tr>
+                <td>LIQ-2083</td>
+                <td>AM-0137 Composite</td>
+                <td>UNKNOWN</td>
+                <td>SEE ATTACHED PROTOCOL</td>
+                <td><span class="status restricted">RESTRICTED</span></td>
+            </tr>
+
+            <tr>
+                <td>LIQ-2084</td>
+                <td>Office Printer — Sector C</td>
+                <td>END OF SERVICE LIFE</td>
+                <td>STANDARD DISPOSAL</td>
+                <td><span class="status available">AUTHORIZED</span></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+</section>
+
+
+<!-- ASSETS -->
+
+<section id="assets" class="page">
+
+    <h1 class="page-title">ASSET REGISTRY</h1>
+    <div class="page-description">
+        Facility equipment and material currently registered within the system.
+    </div>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ASSET ID</th>
+                <th>DESCRIPTION</th>
+                <th>LOCATION</th>
+                <th>OWNER</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>AST-00192</td>
+                <td>Security Radio</td>
+                <td>SECURITY ARMORY</td>
+                <td>SECURITY</td>
+                <td><span class="status available">ACTIVE</span></td>
+            </tr>
+
+            <tr>
+                <td>AST-00377</td>
+                <td>Emergency Medical Kit</td>
+                <td>CHECKPOINT 04</td>
+                <td>MEDICAL</td>
+                <td><span class="status available">ACTIVE</span></td>
+            </tr>
+
+            <tr>
+                <td>AST-00912</td>
+                <td>Reinforced Transport Container</td>
+                <td>VAULT 03</td>
+                <td>CONTAINMENT</td>
+                <td><span class="status restricted">RESTRICTED</span></td>
+            </tr>
+
+            <tr>
+                <td>AST-01371</td>
+                <td>Unknown Composite Material</td>
+                <td>VAULT 03</td>
+                <td>RESEARCH</td>
+                <td><span class="status restricted">ANOMALOUS</span></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+</section>
+
+
+<!-- TRANSFERS -->
+
+<section id="transfers" class="page">
+
+    <h1 class="page-title">INTER-FACILITY TRANSFER ORDERS</h1>
+    <div class="page-description">
+        Material transfer requests authorized through Foundation logistics.
+    </div>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ORDER</th>
+                <th>ORIGIN</th>
+                <th>DESTINATION</th>
+                <th>CARGO</th>
+                <th>ESCORT</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>TR-55102</td>
+                <td>FACILITY-██</td>
+                <td>FACILITY-██</td>
+                <td>Medical Supplies</td>
+                <td>SECURITY</td>
+            </tr>
+
+            <tr>
+                <td>TR-55103</td>
+                <td>FACILITY-██</td>
+                <td>AREA-██</td>
+                <td>Containment Equipment</td>
+                <td>SECURITY / MTF</td>
+            </tr>
+
+            <tr>
+                <td>TR-55104</td>
+                <td>FACILITY-██</td>
+                <td>FACILITY-██</td>
+                <td>AM-0192</td>
+                <td>RESTRICTED</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+</section>
+
+
+<!-- SECURITY -->
+
+<section id="security" class="page">
+
+    <h1 class="page-title">SECURITY NOTICES</h1>
+    <div class="page-description">
+        Departmental security notifications relevant to Procurement & Liquidation.
+    </div>
+
+    <div class="alert red">
+        [SECURITY FLAG 01] Unauthorized removal of anomalous materials is
+        grounds for immediate disciplinary action.
+    </div>
+
+    <div class="alert">
+        [SECURITY FLAG 02] Personnel must verify container integrity before
+        accepting any anomalous shipment.
+    </div>
+
+    <div class="alert">
+        [SECURITY FLAG 03] Do not discuss restricted inventory outside
+        authorized Foundation communication channels.
+    </div>
+
+    <div class="card">
+        <h3>LEVEL 3 ACCESS REMINDER</h3>
+        <p>
+            Personnel SCPF-3-7447 is authorized to access departmental
+            procurement records and selected logistics records.
+        </p>
+
+        <p class="warning">
+            Some records remain inaccessible due to insufficient clearance.
+        </p>
+    </div>
+
+</section>
+
+</main>
+
+<footer>
+    <span>SCPF INTERNAL NETWORK // P&L TERMINAL</span>
+    <span>SESSION: <span class="blink">ACTIVE</span></span>
+</footer>
+
+</div>
+
+<script>
+function showPage(pageId, button) {
+
+    document.querySelectorAll(".page").forEach(page => {
+        page.classList.remove("active");
+    });
+
+    document.getElementById(pageId).classList.add("active");
+
+    document.querySelectorAll("nav button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    button.classList.add("active");
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+</script>
+
+</body>
+</html>
